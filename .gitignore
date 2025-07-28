@@ -34,3 +34,5 @@ commet
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Added by goreleaser init:
+dist/
