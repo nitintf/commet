@@ -14,14 +14,19 @@ before:
     - go mod tidy
 
 builds:
+  - id: default
   - env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+    goarch:
+      - amd64
+      - arm64
 
 archives:
+  - id: default
   - formats: [tar.gz]
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
@@ -45,18 +50,32 @@ changelog:
       - 'README'
       - Merge pull request
       - Merge branch
-  
-brews:
+
+homebrew_casks:
   - name: commet
-    tap:
+    binary: commet
+    ids: [default]
+    homepage: "https://github.com/nitintf/commet"
+    description: "A CLI tool that helps you write better Git commit messages with AI"
+    caveats: |
+      Run `commet --help` to get started.
+    url:
+      template: "https://github.com/nitintf/commet/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+      verified: "github.com/nitintf/commet"
+    commit_author:
+      name: "Nitin Panwar"
+      email: "nitinpanwar0802@gmail.com"
+    commit_msg_template: "Brew cask update for commet version {{ .Tag }}"
+    directory: "Casks"
+    skip_upload: false
+    repository:
       owner: nitintf
       name: homebrew-commet
-    commit_author:
-      name: Nitin Panwar
-      email: nitinpanwar0802@gmail.com
-    homepage: https://github.com/nitintf/commet
-    description: "A CLI tool to generate better commit messages using AI and GitHub utils"
-      
+      branch: main
+      pull_request:
+        enabled: true
+        draft: false
+
 
 release:
   footer: >-
