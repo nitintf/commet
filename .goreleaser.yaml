@@ -45,10 +45,18 @@ changelog:
       - 'README'
       - Merge pull request
       - Merge branch
-
+  
 brews:
   - name: commet
-    homepage: https://github.com/nitintf/homebrew-commet 
+    tap:
+      owner: nitintf
+      name: homebrew-commet
+    commit_author:
+      name: Nitin Panwar
+      email: nitinpanwar0802@gmail.com
+    homepage: https://github.com/nitintf/commet
+    description: "A CLI tool to generate better commit messages using AI and GitHub utils"
+      
 
 release:
   footer: >-
