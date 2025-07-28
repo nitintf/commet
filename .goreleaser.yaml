@@ -15,7 +15,7 @@ before:
 
 builds:
   - id: commet
-  - env:
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
