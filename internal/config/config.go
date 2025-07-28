@@ -25,6 +25,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)
 	}
 
+	// Set UseAI default to true if not explicitly set in config
+	if !viper.IsSet("git.use_ai") {
+		cfg.Git.UseAI = true
+	}
+
 	cfg.SetDefaults()
 
 	return &cfg, nil
@@ -37,6 +42,9 @@ func (c *Config) Save() error {
 	viper.Set("git.auto_stage", c.Git.AutoStage)
 	viper.Set("git.show_diff", c.Git.ShowDiff)
 	viper.Set("git.confirm_push", c.Git.ConfirmPush)
+	viper.Set("git.direct_commit", c.Git.DirectCommit)
+	viper.Set("git.use_ai", c.Git.UseAI)
+	viper.Set("git.interactive", c.Git.Interactive)
 
 	configPath := viper.ConfigFileUsed()
 	if configPath == "" {

@@ -1,14 +1,16 @@
 package config
 
 type GitConfig struct {
-	AutoStage   bool `mapstructure:"auto_stage" yaml:"auto_stage"`
-	ShowDiff    bool `mapstructure:"show_diff" yaml:"show_diff"`
-	ConfirmPush bool `mapstructure:"confirm_push" yaml:"confirm_push"`
+	AutoStage     bool `mapstructure:"auto_stage" yaml:"auto_stage"`
+	ShowDiff      bool `mapstructure:"show_diff" yaml:"show_diff"`
+	ConfirmPush   bool `mapstructure:"confirm_push" yaml:"confirm_push"`
+	DirectCommit  bool `mapstructure:"direct_commit" yaml:"direct_commit"`
+	UseAI         bool `mapstructure:"use_ai" yaml:"use_ai"`
+	Interactive   bool `mapstructure:"interactive" yaml:"interactive"`
 }
 
 func (c *GitConfig) SetDefaults() {
-	// Only set defaults for uninitialized values
-	// For booleans, we can't distinguish between false and unset,
-	// so we'll let the YAML file or explicit user settings take precedence
-	// The defaults are now just documentation of the recommended settings
+	// Since we can't distinguish between false and unset for boolean fields in Go,
+	// we rely on the config file or explicit user settings for the actual values.
+	// The application should handle defaults at runtime when needed.
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/atotto/clipboard"
 	"github.com/bitcs/commet/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -17,6 +18,7 @@ const (
 	gitSettings
 	enteringText
 	confirmingSave
+	selectingModel
 )
 
 type configModel struct {
@@ -30,6 +32,7 @@ type configModel struct {
 	message       string
 	previousState configState
 	hasChanges    bool
+	modelOptions  []string
 }
 
 func NewConfigModel(cfg *config.Config) configModel {
@@ -59,6 +62,8 @@ func (m configModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateTextInput(msg)
 		case confirmingSave:
 			return m.updateConfirmation(msg)
+		case selectingModel:
+			return m.updateModelSelection(msg)
 		}
 	}
 	return m, nil
@@ -124,15 +129,21 @@ func (m configModel) updateAISettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.showingInput = true
 			return m, nil
 		case 2:
+			m.modelOptions = m.config.AI.GetAvailableModels()
+			m.previousState = aiSettings
+			m.state = selectingModel
+			m.cursor = 0
+			// Find current model index
 			currentModel := m.config.AI.Model
 			if currentModel == "" {
 				currentModel = m.config.GetDefaultModel()
 			}
-			m.currentField = "Model"
-			m.textInput = currentModel
-			m.previousState = aiSettings
-			m.state = enteringText
-			m.showingInput = true
+			for i, model := range m.modelOptions {
+				if model == currentModel {
+					m.cursor = i
+					break
+				}
+			}
 			return m, nil
 		case 3:
 			m.state = mainMenu
@@ -143,7 +154,7 @@ func (m configModel) updateAISettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m configModel) selectProvider() (tea.Model, tea.Cmd) {
-	providers := []config.Provider{config.ProviderOpenAI, config.ProviderClaude, config.ProviderGoogle}
+	providers := []config.Provider{config.ProviderOpenAI, config.ProviderClaude, config.ProviderGoogle, config.ProviderGroq}
 	currentIndex := 0
 	for i, p := range providers {
 		if p == m.config.AI.Provider {
@@ -164,7 +175,7 @@ func (m configModel) selectProvider() (tea.Model, tea.Cmd) {
 }
 
 func (m configModel) updateGitSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	gitItems := []string{"Auto Stage (press Enter to toggle)", "Show Diff (press Enter to toggle)", "Confirm Push (press Enter to toggle)", "← Back"}
+	gitItems := []string{"Auto Stage (press Enter to toggle)", "Show Diff (press Enter to toggle)", "Confirm Push (press Enter to toggle)", "Direct Commit (press Enter to toggle)", "Interactive Mode (press Enter to toggle)", "Use AI (press Enter to toggle)", "← Back"}
 
 	switch msg.String() {
 	case "ctrl+c", "q":
@@ -195,7 +206,45 @@ func (m configModel) updateGitSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.message = fmt.Sprintf("Confirm Push %s", m.boolToString(m.config.Git.ConfirmPush))
 			m.hasChanges = true
 		case 3:
+			m.config.Git.DirectCommit = !m.config.Git.DirectCommit
+			m.message = fmt.Sprintf("Direct Commit %s", m.boolToString(m.config.Git.DirectCommit))
+			m.hasChanges = true
+		case 4:
+			m.config.Git.Interactive = !m.config.Git.Interactive
+			m.message = fmt.Sprintf("Interactive Mode %s", m.boolToString(m.config.Git.Interactive))
+			m.hasChanges = true
+		case 5:
+			m.config.Git.UseAI = !m.config.Git.UseAI
+			m.message = fmt.Sprintf("Use AI %s", m.boolToString(m.config.Git.UseAI))
+			m.hasChanges = true
+		case 6:
 			m.state = mainMenu
+			m.cursor = 0
+		}
+	}
+	return m, nil
+}
+
+func (m configModel) updateModelSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		return m, tea.Quit
+	case "esc":
+		m.state = m.previousState
+		m.cursor = 0
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case "down", "j":
+		if m.cursor < len(m.modelOptions)-1 {
+			m.cursor++
+		}
+	case "enter":
+		if m.cursor < len(m.modelOptions) {
+			m.config.AI.Model = m.modelOptions[m.cursor]
+			m.hasChanges = true
+			m.state = m.previousState
 			m.cursor = 0
 		}
 	}
@@ -219,6 +268,15 @@ func (m configModel) updateTextInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.textInput = m.textInput[:len(m.textInput)-1]
 		}
 	case "ctrl+u":
+		m.textInput = ""
+	case "ctrl+v", "cmd+v":
+		// Paste from clipboard (works on both Windows/Linux and Mac)
+		if clipboardText, err := clipboard.ReadAll(); err == nil {
+			cleanText := cleanClipboardText(clipboardText)
+			m.textInput += cleanText
+		}
+	case "ctrl+a", "cmd+a":
+		// Select all (clear current input, will be replaced on next paste/type)
 		m.textInput = ""
 	default:
 		// Accept all printable characters and common symbols
@@ -333,6 +391,9 @@ func (m configModel) View() string {
 			fmt.Sprintf("Auto Stage: %s", m.boolToString(m.config.Git.AutoStage)),
 			fmt.Sprintf("Show Diff: %s", m.boolToString(m.config.Git.ShowDiff)),
 			fmt.Sprintf("Confirm Push: %s", m.boolToString(m.config.Git.ConfirmPush)),
+			fmt.Sprintf("Direct Commit: %s", m.boolToString(m.config.Git.DirectCommit)),
+			fmt.Sprintf("Interactive Mode: %s", m.boolToString(m.config.Git.Interactive)),
+			fmt.Sprintf("Use AI: %s", m.boolToString(m.config.Git.UseAI)),
 			"← Back",
 		}
 
@@ -359,7 +420,23 @@ func (m configModel) View() string {
 
 		// Add cursor indicator
 		s.WriteString(fmt.Sprintf("> %s_\n", displayInput))
-		s.WriteString("\nType your input, Enter to save, Esc to cancel")
+		s.WriteString("\nType or paste (Ctrl+V/Cmd+V), Ctrl+A to clear, Enter to save, Esc to cancel")
+
+	case selectingModel:
+		s.WriteString("Select Model:\n\n")
+
+		for i, model := range m.modelOptions {
+			cursor := " "
+			if m.cursor == i {
+				cursor = ">"
+				s.WriteString(fmt.Sprintf("%s %s\n",
+					highlightStyle.Render(cursor),
+					highlightStyle.Render(model)))
+			} else {
+				s.WriteString(fmt.Sprintf("%s %s\n", cursor, model))
+			}
+		}
+		s.WriteString("\nUse ↑/↓ to navigate, Enter to select, Esc to go back")
 
 	case confirmingSave:
 		s.WriteString("Save Commet Configuration?\n\n")
@@ -383,6 +460,24 @@ func (m configModel) boolToString(b bool) string {
 		return "✓ enabled"
 	}
 	return "✗ disabled"
+}
+
+// cleanClipboardText removes unwanted characters from clipboard content
+func cleanClipboardText(text string) string {
+	// Remove newlines, carriage returns, and tabs
+	cleanText := strings.ReplaceAll(text, "\n", "")
+	cleanText = strings.ReplaceAll(cleanText, "\r", "")
+	cleanText = strings.ReplaceAll(cleanText, "\t", "")
+
+	// Only keep printable ASCII characters
+	var filteredText string
+	for _, char := range cleanText {
+		if char >= ' ' && char <= '~' {
+			filteredText += string(char)
+		}
+	}
+
+	return filteredText
 }
 
 func RunConfigUI(cfg *config.Config) error {

@@ -96,7 +96,7 @@ func init() {
 	configCmd.AddCommand(configShowCmd)
 	configCmd.AddCommand(configSetCmd)
 
-	configSetCmd.Flags().StringP("provider", "p", "", "AI provider (openai, claude, google)")
+	configSetCmd.Flags().StringP("provider", "p", "", "AI provider (openai, claude, google, groq)")
 	configSetCmd.Flags().StringP("api-key", "k", "", "API key for the AI provider")
 	configSetCmd.Flags().StringP("model", "m", "", "AI model to use")
 }
