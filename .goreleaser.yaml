@@ -46,6 +46,10 @@ changelog:
       - Merge pull request
       - Merge branch
 
+brews:
+  - name: commet
+    homepage: https://github.com/nitintf/homebrew-commet 
+
 release:
   footer: >-
 
